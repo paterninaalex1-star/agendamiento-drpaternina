@@ -655,6 +655,14 @@
     return ok;
   }
 
+  // Envío a Google Sheets via fetch (espera respuesta antes de continuar)
+  async function sendToSheet(data) {
+    const params = new URLSearchParams(data);
+    try {
+      await fetch(SHEET_URL + '?' + params.toString(), { mode: 'no-cors' });
+    } catch(e) {}
+  }
+
   // Paso 1: validar → guardar en localStorage → enviar como Pendiente → ir a Bold
   async function handleSubmit() {
     if (!validate()) return;
@@ -672,8 +680,7 @@
     };
 
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-    sendToSheet({ ...data, estado: 'Pendiente' });       // no-await: no bloqueamos
-    await new Promise(r => setTimeout(r, 600));           // pequeña pausa para que el iframe se cree
+    await sendToSheet({ ...data, estado: 'Pendiente' });
     window.location.href = BOLD_URL;
   }
 
@@ -684,37 +691,10 @@
     document.getElementById('processingPanel').style.display = 'block';
     window.scrollTo({top: 0, behavior: 'smooth'});
 
-    sendToSheet({ ...data, estado: 'Pagado' });
-    await new Promise(r => setTimeout(r, 2500));
+    await sendToSheet({ ...data, estado: 'Pagado' });
     localStorage.removeItem(STORAGE_KEY);
     document.getElementById('processingPanel').style.display = 'none';
     document.getElementById('successPanel').classList.add('visible');
-  }
-
-  // Envío silencioso a Google Sheets vía iframe
-  function sendToSheet(data) {
-    let iframe = document.getElementById('hidden-iframe');
-    if (!iframe) {
-      iframe = document.createElement('iframe');
-      iframe.id = 'hidden-iframe';
-      iframe.name = 'hidden-iframe';
-      iframe.style.display = 'none';
-      document.body.appendChild(iframe);
-    }
-    const form = document.createElement('form');
-    form.method = 'GET';
-    form.action = SHEET_URL;
-    form.target = 'hidden-iframe';
-    for (const [key, value] of Object.entries(data)) {
-      const input = document.createElement('input');
-      input.type = 'hidden';
-      input.name = key;
-      input.value = value;
-      form.appendChild(input);
-    }
-    document.body.appendChild(form);
-    form.submit();
-    document.body.removeChild(form);
   }
 
   function resetForm() {
